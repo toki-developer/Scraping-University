@@ -10,44 +10,18 @@ import org.jsoup.select.Elements;
 import io.github.cdimascio.dotenv.Dotenv;
 
 class App {
+    public static Dotenv dotenv = Dotenv.load();
     public static void main(String[] args) {
-        Dotenv dotenv = Dotenv.load();
         String id = dotenv.get("USER_ID");
         String password = dotenv.get("PASSWORD");
-        String loginUrl = dotenv.get("LOGIN_URL");
         String mypageUrl = dotenv.get("MYPAGE_URL");
-
         try {
-            Connection.Response response = Jsoup.connect(loginUrl)
-                    .method(Connection.Method.GET).execute();
-
-            String logintoken = response.parse().getElementsByAttributeValue("name", "logintoken").get(0).attr("value");
-            response = Jsoup.connect(loginUrl).cookies(response.cookies())
-                    .data("logintoken", logintoken).data("username", id).data("password", password)
-                    .method(Connection.Method.POST).followRedirects(false).execute();
-
-            Map<String, String> cookies = response.cookies();
-
-            //               ホームを開く
-//            cookies.remove("MOODLEID1_");
-//            while (response.statusCode() == 303) {
-//                response = Jsoup.connect(response.header("Location")).cookies(cookies)
-//                        .method(Connection.Method.GET).followRedirects(false).execute();
-//            }
-//            String html = response.parse().outerHtml();
-//            Document homeDoc = Jsoup.parseBodyFragment(html);
-//
-//            // 選択科目一覧
-//            Elements subjectList = homeDoc.select("li.type_course.depth_3.contains_branch p a");
-//            for (Element subject : subjectList) {
-//                System.out.println("title: " + subject.ownText() + ",  href: " + subject.absUrl("href"));
-//            }
+            Map<String, String> cookies = getCookies(id, password);
 
             // マイページ
             Document myPageDoc = Jsoup.connect(mypageUrl)
-                    .cookies(response.cookies())
+                    .cookies(cookies)
                     .get();
-
             // 選択科目一覧
             Elements eventList = myPageDoc.select("div.event");
             for (Element event : eventList) {
@@ -62,7 +36,7 @@ class App {
                 String timeHHMM = data.ownText();
 
                 Document eventModalDoc = Jsoup.connect(href)
-                        .cookies(response.cookies())
+                        .cookies(cookies)
                         .get();
 
                 Elements eventCardDoc = eventModalDoc.getElementsByClass("description");
@@ -74,5 +48,32 @@ class App {
             System.out.println("Moodle接続時にエラーが発生しました（接続エラー）。");
             e.printStackTrace();
         }
+    }
+
+    public static Map<String, String> getCookies(String id, String password) {
+        String loginUrl = dotenv.get("LOGIN_URL");
+        try {
+            Connection.Response response = Jsoup.connect(loginUrl)
+                    .method(Connection.Method.GET).execute();
+
+            String logintoken = response.parse().getElementsByAttributeValue("name", "logintoken").get(0).attr("value");
+            response = Jsoup.connect(loginUrl).cookies(response.cookies())
+                    .data("logintoken", logintoken).data("username", id).data("password", password)
+                    .method(Connection.Method.POST).followRedirects(false).execute();
+            //               ホームを開く
+//            cookies.remove("MOODLEID1_");
+//            while (response.statusCode() == 303) {
+//                response = Jsoup.connect(response.header("Location")).cookies(cookies)
+//                        .method(Connection.Method.GET).followRedirects(false).execute();
+//            }
+//            String html = response.parse().outerHtml();
+//            Document homeDoc = Jsoup.parseBodyFragment(html);
+//
+            return response.cookies();
+        } catch (IOException e) {
+            System.out.println("Moodle接続時にエラーが発生しました（接続エラー）。");
+            e.printStackTrace();
+        }
+        return null;
     }
 }
