@@ -51,16 +51,23 @@ class App {
             // 選択科目一覧
             Elements eventList = myPageDoc.select("div.event");
             for (Element event : eventList) {
-
-                // タイトル
-                String title = event.getElementsByTag("a").get(0).ownText();
+                // タイトルとリンク
+                Element titleDoc = event.getElementsByTag("a").get(0);
+                String title = titleDoc.ownText();
+                String href = titleDoc.absUrl("href");
 
                 // 日付
                 Element data = event.getElementsByClass("date").get(0);
-                String dataYYMMdd = data.child(0).ownText();
+                String dataYYMMDD = data.child(0).ownText();
                 String timeHHMM = data.ownText();
 
-                System.out.println(title + " : " + dataYYMMdd + " " + timeHHMM);
+                Document eventModalDoc = Jsoup.connect(href)
+                        .cookies(response.cookies())
+                        .get();
+
+                Elements eventCardDoc = eventModalDoc.getElementsByClass("description");
+                String subjectName = eventCardDoc.select("div:last-child div:last-child a").get(0).ownText();
+                System.out.println(subjectName + " : " + title + " : " + dataYYMMDD + " " + timeHHMM);
             }
 
         } catch (IOException e) {
